@@ -1,0 +1,1367 @@
+{
+  "info": {
+    "name": "Security Agency Management System API - Dynamic Auth",
+    "description": "Complete REST API with Dynamic User Authentication\n\nBase URL: http://localhost:3000/api/v1\n\nAuthentication: Bearer Token (JWT)\n\nUser Roles:\n- DIRECTOR: Full system access (can manage users, all operations)\n- ADMIN: Can manage guards, tenders, attendance, reports\n- SUPERVISOR: View and mark attendance for their zone only\n\nWorkflow:\n1. First user registered automatically becomes DIRECTOR\n2. Director can create ADMIN and SUPERVISOR users\n3. All users login with username/email and password\n4. JWT token expires after 8 hours\n\nDefault Admin (auto-created if no users exist):\n- Username: admin\n- Password: admin123\n- Email: admin@securityagency.com",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "guardId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "supervisorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenderId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "attendanceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "salaryId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & User Management",
+      "description": "Dynamic user authentication and management endpoints",
+      "item": [
+        {
+          "name": "1.1 Register First User (Auto becomes DIRECTOR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.environment.set(\"token\", jsonData.access_token);",
+                  "    pm.environment.set(\"userId\", jsonData.user.id);",
+                  "    console.log(\"Token saved successfully\");",
+                  "}",
+                  "pm.test(\"Status code is 200 or 201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(jsonData).to.have.property(\"access_token\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fullName\": \"System Administrator\",\n    \"email\": \"admin@securityagency.com\",\n    \"username\": \"admin\",\n    \"password\": \"admin123\",\n    \"mobileNumber\": \"9999999999\",\n    \"role\": \"director\",\n    \"zoneName\": \"Head Office\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Register New User (Director/Admin only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fullName\": \"John Admin\",\n    \"email\": \"john.admin@example.com\",\n    \"username\": \"john.admin\",\n    \"password\": \"password123\",\n    \"mobileNumber\": \"9876543210\",\n    \"role\": \"admin\",\n    \"isActive\": true,\n    \"permissions\": {\n        \"canCreateGuard\": true,\n        \"canEditGuard\": true,\n        \"canCreateTender\": true,\n        \"canMarkAttendance\": true,\n        \"canGenerateReports\": true\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Register Supervisor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fullName\": \"Suresh Sharma\",\n    \"email\": \"suresh.sharma@example.com\",\n    \"username\": \"suresh.sharma\",\n    \"password\": \"password123\",\n    \"mobileNumber\": \"9876543211\",\n    \"role\": \"supervisor\",\n    \"zoneName\": \"North Zone\",\n    \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Login with Username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.environment.set(\"token\", jsonData.access_token);",
+                  "    pm.environment.set(\"userId\", jsonData.user.id);",
+                  "    console.log(\"Login successful! Token saved.\");",
+                  "}",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response has access_token\", function () {",
+                  "    pm.expect(jsonData).to.have.property(\"access_token\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Login with Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.environment.set(\"token\", jsonData.access_token);",
+                  "    console.log(\"Login successful with email!\");",
+                  "}",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"admin@securityagency.com\",\n    \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Change Password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"oldPassword\": \"admin123\",\n    \"newPassword\": \"newPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "change-password"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.8 Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.9 Get Users by Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?role=supervisor&isActive=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "supervisor"
+                },
+                {
+                  "key": "isActive",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.10 Get All Supervisors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/supervisors",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "supervisors"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.11 Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.12 Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fullName\": \"John Admin Updated\",\n    \"mobileNumber\": \"9988776655\",\n    \"zoneName\": \"Updated Zone\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.13 Deactivate User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "deactivate"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.14 Activate User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}", "activate"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.15 Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Guard Management",
+      "description": "CRUD operations for security guards",
+      "item": [
+        {
+          "name": "Create Guard",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fullName\": \"Rajesh Kumar\",\n    \"mobileNumber\": \"9876543210\",\n    \"residentialAddress\": \"123, Main Street, New Delhi-110001\",\n    \"aadhaarNumber\": \"1234-5678-9012\",\n    \"dateOfJoining\": \"2024-01-15\",\n    \"basicMonthlySalary\": 12500,\n    \"assignedSupervisor\": \"{{supervisorId}}\",\n    \"assignedTender\": \"{{tenderId}}\",\n    \"esiApplicable\": true,\n    \"pfApplicable\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/guards",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Guards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Guards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards?status=active",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Guards by Name",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards?search=Rajesh",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Rajesh"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guards by Supervisor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards?supervisorId={{supervisorId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards"],
+              "query": [
+                {
+                  "key": "supervisorId",
+                  "value": "{{supervisorId}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guard Statistics by Supervisor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards/stats/supervisor-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards", "stats", "supervisor-count"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guard by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards/{{guardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards", "{{guardId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guard by Guard ID (SG-001)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards/guard-id/SG-001",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards", "guard-id", "SG-001"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Guard",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"basicMonthlySalary\": 13500,\n    \"mobileNumber\": \"9988776655\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/guards/{{guardId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards", "{{guardId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Guard",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards/{{guardId}}/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards", "{{guardId}}", "deactivate"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Tender/Client Site Management",
+      "description": "Manage client sites and contracts",
+      "item": [
+        {
+          "name": "Create Tender",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"tenderName\": \"New Tech Park\",\n    \"ownerName\": \"Amit Shah\",\n    \"ownerCompanyName\": \"Tech Solutions Ltd\",\n    \"ownerContactNumber\": \"9876543215\",\n    \"ownerEmail\": \"amit@techsolutions.com\",\n    \"siteAddress\": \"Manyata Tech Park, Bangalore-560045\",\n    \"requiredGuards\": 15,\n    \"contractStartDate\": \"2024-03-01\",\n    \"contractEndDate\": \"2025-02-28\",\n    \"monthlyContractValue\": 225000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tenders",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tenders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenders",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Active Tenders Only",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenders/active",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders", "active"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expiring Tenders (30 days)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenders/expiring?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders", "expiring"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tender by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenders/{{tenderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders", "{{tenderId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Tender",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"requiredGuards\": 20,\n    \"monthlyContractValue\": 300000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tenders/{{tenderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders", "{{tenderId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Close Tender",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenders/{{tenderId}}/close",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders", "{{tenderId}}", "close"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Attendance Management",
+      "description": "Mark and manage daily attendance",
+      "item": [
+        {
+          "name": "Mark Day Shift Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"guardId\": \"{{guardId}}\",\n    \"date\": \"2024-01-15\",\n    \"tenderId\": \"{{tenderId}}\",\n    \"shiftType\": \"day\",\n    \"status\": \"present\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/mark",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "mark"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Night Shift Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"guardId\": \"{{guardId}}\",\n    \"date\": \"2024-01-15\",\n    \"tenderId\": \"{{tenderId}}\",\n    \"shiftType\": \"night\",\n    \"status\": \"present\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/mark",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "mark"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Extra Duty",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"guardId\": \"{{guardId}}\",\n    \"date\": \"2024-01-15\",\n    \"tenderId\": \"{{tenderId}}\",\n    \"shiftType\": \"extra\",\n    \"status\": \"present\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/mark",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "mark"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Attendance Marking",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"date\": \"2024-01-15\",\n    \"tenderId\": \"{{tenderId}}\",\n    \"shiftType\": \"day\",\n    \"attendances\": [\n        {\n            \"guardId\": \"guard_id_1\",\n            \"status\": \"present\"\n        },\n        {\n            \"guardId\": \"guard_id_2\",\n            \"status\": \"present\"\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/attendance/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "bulk"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Guard Attendance for Month",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/guard/{{guardId}}?month=1&year=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "guard", "{{guardId}}"],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "1"
+                },
+                {
+                  "key": "year",
+                  "value": "2024"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Monthly Attendance Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/summary/{{guardId}}?month=1&year=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "summary", "{{guardId}}"],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "1"
+                },
+                {
+                  "key": "year",
+                  "value": "2024"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Attendance Calendar View",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/calendar/{{guardId}}?month=1&year=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["attendance", "calendar", "{{guardId}}"],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "1"
+                },
+                {
+                  "key": "year",
+                  "value": "2024"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Salary Management",
+      "description": "Calculate and manage salaries",
+      "item": [
+        {
+          "name": "Calculate Salary (Preview Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"guardId\": \"{{guardId}}\",\n    \"month\": 1,\n    \"year\": 2024,\n    \"save\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salary/calculate",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary", "calculate"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Calculate and Save Salary",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"guardId\": \"{{guardId}}\",\n    \"month\": 1,\n    \"year\": 2024,\n    \"save\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salary/calculate",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary", "calculate"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lock Salary Month",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"month\": 1,\n    \"year\": 2024\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/salary/lock-month",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary", "lock-month"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Monthly Salary Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salary/report/1/2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary", "report", "1", "2024"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Salary Slip (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/salary/slip/{{guardId}}/1/2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["salary", "slip", "{{guardId}}", "1", "2024"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Reports",
+      "description": "Generate various reports",
+      "item": [
+        {
+          "name": "Get Attendance Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/attendance?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "attendance"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tender Deployment Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/tender-deployment",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "tender-deployment"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Monthly Salary Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/monthly-salary-summary?month=1&year=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "monthly-salary-summary"],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "1"
+                },
+                {
+                  "key": "year",
+                  "value": "2024"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Absenteeism Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/absenteeism?month=1&year=2024&absentThreshold=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "absenteeism"],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "1"
+                },
+                {
+                  "key": "year",
+                  "value": "2024"
+                },
+                {
+                  "key": "absentThreshold",
+                  "value": "3"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Contract Expiry Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/contract-expiry?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "contract-expiry"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Report to Excel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/reports/export/excel?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "export", "excel"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Dashboard & Utilities",
+      "description": "Dashboard statistics and utilities",
+      "item": [
+        {
+          "name": "Get Guard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/guards/stats/supervisor-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["guards", "stats", "supervisor-count"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expiring Contracts Alert",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenders/expiring?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenders", "expiring"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

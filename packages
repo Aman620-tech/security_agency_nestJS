@@ -1,0 +1,1 @@
+npm install @nestjs/common @nestjs/core @nestjs/platform-express @nestjs/mongoose @nestjs/jwt @nestjs/passport @nestjs/config @nestjs/swagger @nestjs/schedule mongoose passport passport-jwt bcrypt class-validator class-transformer dotenv express pdfkit exceljs moment reflect-metadata rxjs
