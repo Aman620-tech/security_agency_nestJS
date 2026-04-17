@@ -22,14 +22,14 @@ async function initAdminUser() {
     if (userCount === 0) {
       console.log('No users found. Creating default admin user...');
       
-      const hashedPassword = await bcrypt.hash('12345', 10);
+      const hashedPassword = await bcrypt.hash('123456', 10);
       
       await usersCollection.insertOne({
         fullName: 'System Administrator',
         email: 'padneyaman997@gmail.com',
         username: 'admin',
         password: hashedPassword,
-        mobileNumber: '9999999999',
+        mobileNumber: '9993935261',
         role: 'director',
         isActive: true,
         permissions: {
