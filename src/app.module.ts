@@ -12,6 +12,7 @@ import { TenderModule } from './modules/tenders/tender.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { SalaryModule } from './modules/salary/salary.module';
 import { ReportModule } from './modules/reports/report.module';
+import { ReviewModule } from './modules/reviews/review.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ReportModule } from './modules/reports/report.module';
     AttendanceModule,
     SalaryModule,
     ReportModule,
+    ReviewModule,
   ],
 })
 export class AppModule {}
