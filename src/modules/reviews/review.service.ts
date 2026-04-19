@@ -21,6 +21,7 @@ export class ReviewService {
   async findVisible(): Promise<ReviewDocument[]> {
     return this.reviewModel
       .find({ is_deleted: false, is_show: true })
+      .select('-email -is_deleted -is_show -_id')
       .sort({ createdAt: -1 })
       .exec();
   }
